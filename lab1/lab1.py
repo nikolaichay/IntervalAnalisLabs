@@ -1,178 +1,281 @@
-import intvalpy as ip
-import numpy as np
-import matplotlib.pyplot as plt
+from __future__ import annotations
+import math as m
+from numbers import Number
 from copy import deepcopy
-# Task 1
 
-def calculateDet(delta):
-        midA = [[1.05, 1],
-                [0.95, 1]]
-        radA = [[delta, delta], [delta, delta]]
-        A = ip.Interval(midA, radA, midRadQ=True)
-        detA = A[0][0] * A[1][1] - A[1][0] * A[0][1]
-        return detA
+class Interval:
+    def __init__(self, left: int | float, right: int | float) -> Interval:
+        if left > right:
+            raise ValueError("Left point must be less then right point")
+        self.__left = left
+        self.__right = right
+        self.__is_point = self.__left == self.right
 
-# Find delta that 0 is in det(A)
-def task1():
-    deltaArray = np.linspace(0, 1, num=10)
-    detArrayHight = []
-    detArrayLow = []
-    for i in range(len(deltaArray)):
-        delta = deltaArray[i]
-        detA = calculateDet(delta)
-        detArrayHight.append(detA.b)
-        detArrayLow.append(detA.a)
+
+    def __str__(self) -> str:
+        return '[' + str(self.__left) + ', ' + str(self.__right) + ']'
     
-    plt.figure()
-    plt.title("Task 1")
-    plt.grid()
-    plt.plot(deltaArray, detArrayHight, label = "det up border")
-    plt.plot(deltaArray, detArrayLow, label = "det down border")
-    plt.plot(0.025, calculateDet(0.025).a, 'b*', label = "delta = 0.025")
-    plt.xlabel('delta')
-    plt.ylabel('det(A)')
-    plt.legend()
-    plt.show()
+    def __repr__(self) -> str:
+        return '[' + str(self.__left) + ', ' + str(self.__right) + ']'
 
 
-def det2(A):
-    return A[0][0] * A[1][1] - A[1][0] * A[0][1]
-
-def bauman(vertices):
-    for i in range(len(vertices)):
-        for j in range(i + 1):
-            if det2(vertices[i]) * det2(vertices[j]) <= 0:
-                return False
-    return True
-
-def task2():
-    A = np.array([[1.05, 0.95], [ 1.0, 1.0]])
+    def __add__(self, other: Interval) -> Interval:
+        return Interval(self.__left + other.__left, self.__right + other.__right)
     
-    deltas = np.linspace(0.04, 0.06, 10)
-    # Регрессия
-    print("\nЗадача регрессии")
-    for delta in deltas:
-        A1 = A.copy()
-        A1[0][0] -= delta
-        A1[1][0] -= delta
-        A2 = A.copy()
-        A2[0][0] += delta
-        A2[1][0] -= delta
-        A3 = A.copy()
-        A3[0][0] += delta
-        A3[1][0] += delta
-        A4 = A.copy()
-        A4[0][0] -= delta
-        A4[1][0] += delta
 
-        verticesA = [A1, A2, A3, A4]
-        print("{:2.6f}\t{}".format(delta, "неособенная" if bauman(verticesA) else "особенная"))
+    def __radd__(self, other: Interval) -> Interval:
+        return Interval(self.__left + other.__left, self.__right + other.__right)
+    
 
-    # Томография
-    deltas = np.linspace(0.02, 0.029, 10)
-    print("\nЗадача томографии")
-    for delta in deltas:
-        A1 = A.copy()
-        A1[0][0] -= delta
-        A1[0][1] -= delta
-        A1[1][0] -= delta
-        A1[1][1] -= delta
+    def __sub__(self, other: Interval) -> Interval:
+        return Interval(self.__left - other.__right, self.__right - other.__left)
+    
 
-        A2 = A.copy()
-        A2[0][0] += delta
-        A2[0][1] -= delta
-        A2[1][0] -= delta
-        A2[1][1] -= delta
-        A3 = A.copy()
-        A3[0][0] -= delta
-        A3[0][1] += delta
-        A3[1][0] -= delta
-        A3[1][1] -= delta
-        A4 = A.copy()
-        A4[0][0] -= delta
-        A4[0][1] -= delta
-        A4[1][0] += delta
-        A4[1][1] -= delta
-        A5 = A.copy()
-        A5[0][0] -= delta
-        A5[0][1] -= delta
-        A5[1][0] -= delta
-        A5[1][1] += delta
+    def __rsub__(self, other: Interval) -> Interval:
+        return Interval(self.__left - other.__right, self.__right - other.__left)
+    
 
-        A6 = A.copy()
-        A6[0][0] += delta
-        A6[0][1] += delta
-        A6[1][0] -= delta
-        A6[1][1] -= delta
-        A7 = A.copy()
-        A7[0][0] -= delta
-        A7[0][1] += delta
-        A7[1][0] += delta
-        A7[1][1] -= delta
-        A8 = A.copy()
-        A8[0][0] -= delta
-        A8[0][1] -= delta
-        A8[1][0] += delta
-        A8[1][1] += delta
-        A9 = A.copy()
-        A9[0][0] += delta
-        A9[0][1] -= delta
-        A9[1][0] -= delta
-        A9[1][1] += delta
-        A10 = A.copy()
-        A10[0][0] += delta
-        A10[0][1] -= delta
-        A10[1][0] += delta
-        A10[1][1] -= delta
-        A11 = A.copy()
-        A11[0][0] -= delta
-        A11[0][1] += delta
-        A11[1][0] -= delta
-        A11[1][1] += delta
+    def __mul__(self, other: Interval | Number) -> Interval:
+        if isinstance(other, Number):
+            return Interval(self.__left * other, self.__right * other)
+        if isinstance(other, Interval):
+            return Interval(min(self.__left * other.__left, self.__left * other.__right,
+                                self.__right * other.__left, self.__right * other.__right),
+                            max(self.__left * other.__left, self.__left * other.__right,
+                                self.__right * other.__left, self.__right * other.__right))
+        else:
+            raise TypeError("other must be Interval or Number")
+    
+
+    def __rmul__(self, other: Interval | Number) -> Interval:
+        if isinstance(other, Number):
+            return Interval(self.__left * other, self.__right * other)
+        if isinstance(other, Interval):
+            return Interval(min(self.__left * other.__left, self.__left * other.__right,
+                                self.__right * other.__left, self.__right * other.__right),
+                            max(self.__left * other.__left, self.__left * other.__right,
+                                self.__right * other.__left, self.__right * other.__right))
+        else:
+            raise TypeError("other must be Interval or Number")
+    
+
+    def __truediv__(self, other: Interval) -> Interval:
+        if any([m.isclose(other.__left, 0.0), m.isclose(other.__left, 0.0),
+                m.isclose(other.__right, 0.0), m.isclose(other.__right, 0.0)]):
+            raise ZeroDivisionError("Divide by zero.")
+        
+        return Interval(min(self.__left / other.__left, self.__left / other.__right,
+                            self.__right / other.__left, self.__right / other.__right),
+                        max(self.__left / other.__left, self.__left / other.__right,
+                            self.__right / other.__left, self.__right / other.__right))
+    
+
+    def __rtruediv__(self, other: Interval) -> Interval:
+        if any([m.isclose(other.__left, 0.0), m.isclose(other.__left, 0.0),
+                m.isclose(other.__right, 0.0), m.isclose(other.__right, 0.0)]):
+            raise ZeroDivisionError("Divide by zero.")
+        
+        return Interval(min(self.__left / other.__left, self.__left / other.__right,
+                            self.__right / other.__left, self.__right / other.__right),
+                        max(self.__left / other.__left, self.__left / other.__right,
+                            self.__right / other.__left, self.__right / other.__right))
 
 
-        A12 = A.copy()
-        A12[0][0] += delta
-        A12[0][1] += delta
-        A12[1][0] += delta
-        A12[1][1] -= delta
-        A13 = A.copy()
-        A13[0][0] -= delta
-        A13[0][1] += delta
-        A13[1][0] += delta
-        A13[1][1] += delta
-        A14 = A.copy()
-        A14[0][0] += delta
-        A14[0][1] -= delta
-        A14[1][0] += delta
-        A14[1][1] += delta
-        A15 = A.copy()
-        A15[0][0] += delta
-        A15[0][1] += delta
-        A15[1][0] -= delta
-        A15[1][1] += delta
+    def __contains__(self, num: int | float) -> bool:
+        return self.__left <= num and num <= self.__right
+    
 
-        A16 = A.copy()
-        A16[0][0] += delta
-        A16[0][1] += delta
-        A16[1][0] += delta
-        A16[1][1] += delta
-
-        verticesA = [A1, A2, A3, A4, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16]
-        print("{:2.5f}\t{}".format(delta, "неособенная" if bauman(verticesA) else "особенная"))
+    def is_point_interval(self) -> bool:
+        return self.__is_point
 
 
-def task3():
-    midA = [[1.05, 1],
-            [0.95, 1]]
-    U, S, V = np.linalg.svd(midA)
-    print("Сингулярные числа " + str(S))
+    @property
+    def left(self) -> int | float:
+        return self.__left
+    
+
+    @left.setter
+    def left(self, num: int | float) -> None:
+        if not isinstance(num, Number):
+            raise ValueError("num must be numeric.")
+        self.__left = num
+    
+
+    @left.deleter
+    def left(self) -> None:
+        raise PermissionError("left is not deletable")
+
+    
+    @property
+    def right(self) -> int | float:
+        return self.__right
+    
+
+    @right.setter
+    def right(self, num: int | float) -> None:
+        if not isinstance(num, Number):
+            raise ValueError("num must be numeric.")
+        self.__right = num
+
+
+    @right.deleter
+    def right(self) -> None:
+        raise PermissionError("right is not deletable")
+
+
+    @property
+    def mid(self) -> int | float:
+        return (self.__left + self.__right) / 2
+    
+
+    @mid.setter
+    def mid(self, *args) -> None:
+        raise PermissionError("mid is not editable")
+    
+
+    @mid.deleter
+    def mid(self) -> None:
+        raise PermissionError("mid is not deletable")
+    
+
+    @property
+    def rad(self) -> int | float:
+        return (self.__right - self.__left) / 2
+    
+
+    @rad.setter
+    def rad(self, *args) -> None:
+        raise PermissionError("rad is not editable")
+    
+
+    @rad.deleter
+    def rad(self) -> None:
+        raise PermissionError("rad is not deletable")
+    
+
+    @property
+    def wid(self) -> int | float:
+        return self.__right - self.__left
+    
+
+    @wid.setter
+    def wid(self, *args) -> None:
+        raise PermissionError("wid is not editable")
+    
+
+    @wid.deleter
+    def wid(self) -> None:
+        raise PermissionError("wid is not deletable")
+
+
+empty = Interval(0, 0)
+infinite = Interval(-m.inf, m.inf)
+
+
+IntMatrix = list[list[Interval]]
+Matrix = list[list[Number]]
+
+
+def midrad(midA: Matrix, radA: Matrix) -> IntMatrix:
+    if len(midA) != len(radA):
+        raise IndexError("The size of midA must be equal to the size of radA")
+    column_count = len(midA[0])
+    for i in range(len(midA)):
+        if len(midA[i]) != len(radA[i]) or len(radA[i]) != column_count or len(midA[i]) != column_count:
+            raise IndexError("The size of midA must be equal to the size of radA")
+    
+    res_matrix = list()
+    for i in range(len(midA)):
+        row = []
+        for j in range(len(midA[i])):
+            row.append(Interval(midA[i][j] - radA[i][j], midA[i][j] + radA[i][j]))
+        res_matrix.append(row)
+    return res_matrix
+
+
+def det(A:IntMatrix):
+    return A[0][0] * A[1][1] - A[0][1] * A[1][0]
+
+
+def min_delta_search(A:Matrix, delta: Number, radCoeffs: Matrix) -> bool:
+    def f(A:Matrix, delta: Number, radCoeffs: Matrix):
+        radA = [[delta * radCoeffs[0][0], delta * radCoeffs[0][1]],
+                [delta * radCoeffs[1][0], delta * radCoeffs[1][1]]]
+        A_int = midrad(A, radA)
+        det_A = det(A_int)
+        if 0.0 in det_A:
+            return True
+        else:
+            return False
+        
+    min_delta = delta
+    a = 0
+    b = delta
+    while not m.isclose(a, b, rel_tol=1e-14):
+        min_delta = (a+b)/2
+        if f(A, min_delta, radCoeffs):
+            b = min_delta
+        else:
+            a = min_delta
+    return (a+b)/2
 
 
 if __name__ == "__main__":
-    print("Task 1:")
-    task1()
-    print("Task 2:")
-    task2()
-    print("Task 3:")
-    task3()
+    print("Enter A_11, A_12, A_21, A_22: ", end='')
+    a, b, c, d = [float(n) for n in input().split()]
+    if (a < 0 or b < 0 or c < 0 or d < 0):
+        raise ValueError("Values must be non-negative.")
+    delta = min(a, b, c, d)
+    print(delta)
+    A_orig = [[a,b],[c,d]]
+
+    ############# rad томографии #############
+    print("\nтомография\n")
+    radCoeffs = [[1, 1],
+                 [1, 1]]
+
+    radA = [[delta * radCoeffs[0][0], delta * radCoeffs[0][1]],
+            [delta * radCoeffs[1][0], delta * radCoeffs[1][1]]]
+
+    print("radA =\n", radA)
+    A = midrad(A_orig, radA)
+    print("A = \n", A)
+    print(A)
+    det_A = det(A)
+    
+    print(det_A)
+    if m.isclose(det_A.mid, 0.0):
+        print("delta = 0")
+    elif 0.0 in Interval(det_A.left, det_A.right):
+        min_delta = min_delta_search(A_orig, delta, radCoeffs)
+        print("min delta = ", min_delta)
+        radA = [[min_delta * radCoeffs[0][0], min_delta * radCoeffs[0][1]],
+                [min_delta * radCoeffs[1][0], min_delta * radCoeffs[1][1]]]
+        print(det(midrad(A_orig, radA)))
+
+    ############# rad регрессии #############
+    print("\nрегрессия\n")
+    radCoeffs = [[1, 0],
+                 [1, 0]]
+
+    radA = [[delta * radCoeffs[0][0], delta * radCoeffs[0][1]],
+            [delta * radCoeffs[1][0], delta * radCoeffs[1][1]]]
+
+    print("radA =\n", radA)
+    A = midrad(A_orig, radA)
+    print("A = \n", A)
+    print(A)
+    det_A = det(A)
+    
+    print(det_A)
+    if m.isclose(det_A.mid, 0.0):
+        print("delta = 0")
+    elif 0.0 in Interval(det_A.left, det_A.right):
+        min_delta = min_delta_search(A_orig, delta, radCoeffs)
+        print("min delta = ", min_delta)
+        radA = [[min_delta * radCoeffs[0][0], min_delta * radCoeffs[0][1]],
+                [min_delta * radCoeffs[1][0], min_delta * radCoeffs[1][1]]]
+        print(det(midrad(A_orig, radA)))
+
+
+        # 1.05 1 0.95 1
